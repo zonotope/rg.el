@@ -750,39 +750,6 @@ detailed info."
     (setq rg-toggle-command-line-flags
           (rg-delete-uniq "-i" rg-toggle-command-line-flags))))
 
-(defun rg-single-font-lock-match (face pos limit direction)
-  "Return position of next match of 'font-lock-face property that equals FACE.
-POS is the start position of the search and LIMIT is the limit of the
-search.  If FACE is not found within LIMIT, LIMIT is returned.  If
-DIRECTION is positive search forward in the buffer, otherwise search
-backward."
-  (let ((single-property-change-func
-         (if (> direction 0)
-             'next-single-property-change
-           'previous-single-property-change)))
-    (while
-        (progn
-          (setq pos (funcall single-property-change-func pos 'font-lock-face nil limit))
-          (and (not (equal pos limit))
-               (not (eq (get-text-property pos 'font-lock-face) face))))))
-  pos)
-
-(defun rg-navigate-file-group (steps)
-  "Move point to the a matched result group in the compilation buffer.
-STEPS decides how many groups to move past.  Negative value means
-backwards and positive means forwards."
-  (let ((pos (point))
-        (steps-left (abs steps))
-        (limit
-         (if (< steps 0)
-             (point-min)
-           (point-max))))
-    (while  (and (> steps-left 0) (not (equal pos limit)))
-      (setq pos (rg-single-font-lock-match 'rg-file-tag-face pos limit steps))
-      (setq steps-left (- steps-left 1)))
-    (unless (equal pos limit)
-      (goto-char pos))))
-
 (defun rg-rename-target ()
   "Return the buffer that will be target for renaming."
   (let ((buffer (if (eq major-mode 'rg-mode)
@@ -901,27 +868,8 @@ optional DEFAULT parameter is non nil the flag will be enabled by default."
     (setq dir (read-directory-name "In directory: "
                                    dir nil))))
 
-(defun rg-next-file (n)
-  "Move point to next file with a match.
-Prefix arg N decides how many
-files to navigate.  When `rg-group-result' is nil this is the same as
-invoking `compilation-next-error', otherwise this will navigate to the
-next file with grouped matches."
-  (interactive "p")
-  (if rg-group-result
-      (rg-navigate-file-group n)
-    (compilation-next-error n)))
-
-(defun rg-prev-file (n)
-  "Move point to previous file with a match.
-Prefix arg N decides how many files to navigate.  When
-`rg-group-result' is nil this is the same as invoking
-`compilation-previous-error', otherwise this will navigate to the
-previous file with grouped matches."
-  (interactive "p")
-  (if rg-group-result
-      (rg-navigate-file-group (- n))
-    (compilation-previous-error n)))
+(defalias 'rg-next-file 'compilation-next-file)
+(defalias 'rg-prev-file 'compilation-previous-file)
 
 (defun rg-save-search-as-name (newname)
   "Save the search result in current *rg* result buffer.

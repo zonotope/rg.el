@@ -85,4 +85,21 @@ the original global kemap"
        ,@body
        (use-global-map ,saved-global-map))))
 
+(defun rg-single-font-lock-match (face pos limit direction)
+  "Return position of next match of 'font-lock-face property that equals FACE.
+POS is the start position of the search and LIMIT is the limit of the
+search.  If FACE is not found within LIMIT, LIMIT is returned.  If
+DIRECTION is positive search forward in the buffer, otherwise search
+backward."
+  (let ((single-property-change-func
+         (if (> direction 0)
+             'next-single-property-change
+           'previous-single-property-change)))
+    (while
+        (progn
+          (setq pos (funcall single-property-change-func pos 'font-lock-face nil limit))
+          (and (not (equal pos limit))
+               (not (eq (get-text-property pos 'font-lock-face) face))))))
+  pos)
+
 ;;; test-helper.el ends here

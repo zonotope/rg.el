@@ -252,36 +252,6 @@ matching alias."
       (setq pos (rg-single-font-lock-match 'rg-file-tag-face pos limit 1))
       (should (eq pos limit)))))
 
-(ert-deftest rg-unit/next-prev-file ()
-  "Test that `rg-next-file' and `rg-prev-file' dispatch calls as it should."
-  (let (called arg)
-    (cl-letf (((symbol-function #'rg-navigate-file-group)
-               (lambda (n)
-                 (setq called 'rg-navigate-file-group
-                       arg n)))
-              ((symbol-function #'compilation-next-error)
-               (lambda (n)
-                 (setq called 'compilation-next-error
-                       arg n)))
-              ((symbol-function #'compilation-previous-error)
-               (lambda (n)
-                 (setq called 'compilation-previous-error
-                       arg n))))
-      (let ((rg-group-result t))
-        (rg-next-file 1)
-        (should (eq called 'rg-navigate-file-group))
-        (should (eq arg 1))
-        (rg-prev-file 1)
-        (should (eq called 'rg-navigate-file-group))
-        (should (eq arg (- 1))))
-      (let ((rg-group-result nil))
-        (rg-next-file 1)
-        (should (eq called 'compilation-next-error))
-        (should (eq arg 1))
-        (rg-prev-file 1)
-        (should (eq called 'compilation-previous-error))
-        (should (eq arg 1))))))
-
 (ert-deftest rg-unit/match-grouped-filename ()
   "Test that `rg-match-grouped-filename' finds correct match and restores state."
   (let (saved-pos)
@@ -476,46 +446,6 @@ matching alias."
   (should (equal (expand-file-name
                   (rg-project-root "/tmp/foo.el"))
                  "/tmp/")))
-
-(ert-deftest rg-integration/navigate-file-group-in-grouped-result ()
-  "Test group navigation in grouped result."
-  :tags '(need-rg)
-  (let ((rg-group-result t)
-        (files '("foo.el" "bar.el"))
-        first-file
-        second-file
-        pos)
-    (rg-run "hello" "elisp" (concat default-directory "test/data"))
-    (rg-with-current-result
-      (goto-char (point-min))
-      (rg-navigate-file-group 1)
-      ;; The order of results is non deterministic
-      ;; First match any of the files in `files'.
-      (should (looking-at
-               (concat "File: \\(" (mapconcat 'identity files "\\|") "\\)")))
-      (setq first-file (match-string 1))
-      ;; Filter out the already matched file.
-      (setq second-file
-            (car (seq-filter
-                  (lambda (elm) (not (equal first-file elm))) files)))
-      (rg-navigate-file-group 1)
-      (should (looking-at (concat "File: " second-file)))
-      (compilation-next-error 1)
-      (setq pos (point))
-      (rg-navigate-file-group -3)
-      (should (eq pos (point)))
-      (rg-navigate-file-group -2)
-      (should (looking-at (concat "File: " first-file))))))
-
-(ert-deftest rg-integration/navigate-file-group-in-ungrouped-result ()
-  "Test group navigation in ungrouped result."
-  :tags '(need-rg)
-  (let ((rg-group-result nil))
-    (rg-run "hello" "elisp" (concat default-directory "test/data"))
-    (rg-with-current-result
-      (goto-char (point-min))
-      (rg-navigate-file-group 1)
-      (should (eq (point) (point-min))))))
 
 (defun rg-test-highlight-match (grouped)
   "Helper for highlight testing.
